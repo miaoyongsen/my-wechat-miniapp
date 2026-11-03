@@ -142,8 +142,9 @@ Page({
   let parsed;try{parsed=JSON.parse(this.data.importText)}catch(e){return wx.showToast({title:'JSON 格式错误',icon:'none'})}
   const db=parsed&&parsed.data;
   if(!db||!Array.isArray(db.assets)||!Array.isArray(db.accounts)||!db.rates||typeof db.rates!=='object'||!Array.isArray(db.snapshots)||db.assets.length>20000)return wx.showToast({title:'备份结构不正确',icon:'none'});
-  if(db.assets.some(a=>!a||typeof a.name!=='string'||typeof a.type!=='string'||!CURRENCIES.includes(a.currency)))return wx.showToast({title:'资产数据校验失败',icon:'none'});
-  wx.showModal({title:'恢复本地备份',content:'将覆盖本机所有资产、账户和快照。请先导出当前数据！确认恢复吗？',success:r=>{if(!r.confirm)return;db.transactions=Array.isArray(db.transactions)?db.transactions:[];db.flows=Array.isArray(db.flows)?db.flows:[];db.rates.CNY=1;this.db=db;this.setData({importText:'',autoMarket:!!db.autoMarket});this.save();wx.showToast({title:'恢复成功'})}});
+  if(db.assets.some(a=>!a||typeof a.name!=='string'||!TYPES.includes(a.type)||!CURRENCIES.includes(a.currency)||!db.accounts.includes(a.account)||!Number.isFinite(Number(a.quantity||0))||!Number.isFinite(Number(a.price||0))||!Number.isFinite(Number(a.balance||0))))return wx.showToast({title:'资产数据校验失败',icon:'none'});
+  if(db.accounts.length===0||db.accounts.length>500||db.snapshots.length>20000||!Array.isArray(db.transactions||[])||!Array.isArray(db.flows||[])||(db.transactions||[]).length>100000||(db.flows||[]).length>100000||Object.keys(db.rates).some(k=>!CURRENCIES.includes(k)||!Number.isFinite(Number(db.rates[k]))||Number(db.rates[k])<0))return wx.showToast({title:'备份校验失败',icon:'none'});
+  wx.showModal({title:'恢复本地备份',content:'将覆盖本机所有资产、账户和快照。请先导出当前数据！确认恢复吗？',success:r=>{if(!r.confirm)return;db.transactions=Array.isArray(db.transactions)?db.transactions:[];db.flows=Array.isArray(db.flows)?db.flows:[];db.rates.CNY=1;const previous=this.db;try{wx.setStorageSync(KEY,db);this.db=db;this.setData({importText:'',autoMarket:!!db.autoMarket});this.refresh()}catch(e){this.db=previous;wx.showModal({title:'恢复失败',content:'写入本地存储失败，原数据未被主动清除。',showCancel:false});return}wx.showToast({title:'恢复成功'})}});
  },
  exportData(){const content=JSON.stringify({version:2,exportedAt:new Date().toISOString(),data:this.db});wx.setClipboardData({data:content,success:()=>wx.showModal({title:'备份已复制',content:'JSON 数据已复制到剪贴板，请粘贴到安全位置保存。恢复前请保留当前备份，以免误覆盖。',showCancel:false})})}
 });
