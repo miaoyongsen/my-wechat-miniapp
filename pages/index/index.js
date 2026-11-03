@@ -95,7 +95,7 @@ Page({
  saveTransaction(){
   const a=this.db.assets.find(x=>x.id===this.data.txAsset);if(!a)return;
   const type=this.data.txType,q=Number(this.data.txQuantity),p=Number(this.data.txPrice),cash=Number(this.data.txCash);
-  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(this.data.txDate)||!Number.isFinite(q)||!Number.isFinite(p)||!Number.isFinite(cash)||q<0||p<0||cash<0)return wx.showToast({title:'请检查日期及金额',icon:'none'});
+  if(!validDate(this.data.txDate)||!Number.isFinite(q)||!Number.isFinite(p)||!Number.isFinite(cash)||q<0||p<0||cash<0)return wx.showToast({title:'请检查日期及金额',icon:'none'});
   if(type!=='现金分红'&&!(q>0))return wx.showToast({title:'数量必须大于0',icon:'none'});
   if(type==='现金分红'&&!(cash>0))return wx.showToast({title:'请填写实际到账分红',icon:'none'});
   if(['买入','卖出'].includes(type)&&!(p>0))return wx.showToast({title:'请填写成交单价',icon:'none'});
