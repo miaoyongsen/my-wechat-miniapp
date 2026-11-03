@@ -49,7 +49,7 @@ Page({
  refreshMarket(){
   if(this.data.marketBusy)return;
   const holdings=this.db.assets.filter(a=>this.isHolding(a)&&a.code&&['A股','港股','美股','ETF','黄金ETF'].includes(a.type));
-  const code=a=>{const c=String(a.code||'').trim().toUpperCase();if(/^\\d{6}\\.SH$/.test(c))return 'sh'+c.slice(0,6);if(/^\\d{6}\\.SZ$/.test(c))return 'sz'+c.slice(0,6);if(/^\\d{1,5}\\.HK$/.test(c))return 'hk'+c.split('.')[0].padStart(5,'0');if(/^[A-Z.\\-]+\\.US$/.test(c))return 'us'+c.slice(0,-3);return ''};
+  const code=a=>{const c=String(a.code||'').trim().toUpperCase();if(/^[0-9]{6}[.]SH$/.test(c))return 'sh'+c.slice(0,6);if(/^[0-9]{6}[.]SZ$/.test(c))return 'sz'+c.slice(0,6);if(/^[0-9]{1,5}[.]HK$/.test(c))return 'hk'+c.split('.')[0].padStart(5,'0');if(/^[A-Z.-]+[.]US$/.test(c))return 'us'+c.slice(0,-3);return ''};
   const valid=holdings.filter(a=>code(a));
   if(!valid.length){this.setData({marketStatus:'没有可自动查询的股票代码；可在资产编辑页手动填写价格'});return}
   this.setData({marketBusy:true,marketStatus:'正在直连腾讯行情（无需云服务）…'});
