@@ -5,19 +5,19 @@ const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth
 const num=v=>Number(v)||0;
 const fmt=v=>num(v).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const id=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-function initial(){return {assets:[],accounts:['默认账户'],rates:{CNY:1,USD:1,HKD:1,JPY:1,EUR:1},baseline:null,snapshots:[],transactions:[]}}
+function initial(){return {assets:[],accounts:['默认账户'],rates:{CNY:1,USD:0,HKD:0,JPY:0,EUR:0},baseline:null,snapshots:[],transactions:[]}}
 Page({
- data:{tab:'home',types:TYPES,currencies:CURRENCIES,assets:[],accounts:[],total:'0.00',yearProfit:'--',yearRate:'--',hidden:false,filter:'类型',groups:[],formOpen:false,form:{type:'A股',currency:'CNY',account:'默认账户',name:'',code:'',quantity:'',cost:'',price:'',balance:'',rate:'',start:'',maturity:'',note:''},editing:'',search:'',newAccount:'',rateCurrency:'USD',rateValue:'',baseValue:'',snapshotDate:'',snapshots:[],rates:[],viewTotal:'',viewYear:'',notice:'',sort:'收益率',undo:null,marketBusy:false,marketStatus:'本地存储模式：股票行情可尝试直连，汇率和数字资产价格暂需手动维护',marketUpdatedAt:'',autoMarket:false,txTypes:['买入','卖出','现金分红','送股','拆分'],txOpen:false,txAsset:'',txType:'买入',txQuantity:'',txPrice:'',txCash:'',txDate:today(),txNote:'',txList:[],importText:'',},
- onLoad(){let db=wx.getStorageSync(KEY);if(!db||!Array.isArray(db.assets)){db=initial();const old=wx.getStorageSync(OLD)||[];db.assets=old.map(a=>({id:id(),type:'现金',name:a.name,account:'默认账户',currency:'CNY',balance:num(a.amount)}));wx.setStorageSync(KEY,db)}db.transactions=db.transactions||[];this.db=db;this.setData({autoMarket:!!db.autoMarket,marketUpdatedAt:db.lastMarketUpdate||''});this.refresh()},
+ data:{tab:'home',types:TYPES,currencies:CURRENCIES,assets:[],accounts:[],total:'0.00',yearProfit:'--',yearRate:'--',hidden:false,filter:'类型',groups:[],formOpen:false,form:{type:'A股',currency:'CNY',account:'默认账户',name:'',code:'',quantity:'',cost:'',price:'',balance:'',rate:'',start:'',maturity:'',note:''},editing:'',search:'',newAccount:'',rateCurrency:'USD',rateValue:'',baseValue:'',snapshotDate:'',snapshots:[],rates:[],viewTotal:'',viewYear:'',notice:'',sort:'收益率',undo:null,marketBusy:false,marketStatus:'本地存储模式：股票行情可尝试直连，汇率和数字资产价格暂需手动维护',marketUpdatedAt:'',autoMarket:false,txTypes:['买入','卖出','现金分红','送股','拆分'],txOpen:false,txAsset:'',txType:'买入',txQuantity:'',txPrice:'',txCash:'',txDate:today(),txNote:'',txList:[],importText:'',flowType:'存入',flowAmount:'',flowDate:today(),flowNote:'',flowList:[],yearFlows:'0.00',dividendTotal:'0.00',unpricedCount:0,},
+ onLoad(){let db=wx.getStorageSync(KEY);if(!db||!Array.isArray(db.assets)){db=initial();const old=wx.getStorageSync(OLD)||[];db.assets=old.map(a=>({id:id(),type:'现金',name:a.name,account:'默认账户',currency:'CNY',balance:num(a.amount)}));wx.setStorageSync(KEY,db)}db.transactions=db.transactions||[];db.flows=db.flows||[];this.db=db;this.setData({autoMarket:!!db.autoMarket,marketUpdatedAt:db.lastMarketUpdate||''});this.refresh()},
  onShow(){if(this.db){this.refresh();if(this.db.autoMarket)this.refreshMarket()}},
  save(){wx.setStorageSync(KEY,this.db);this.refresh()},
  refresh(){const db=this.db;const value=a=>{const raw=this.isHolding(a)?num(a.quantity)*num(a.price):num(a.balance);return raw*(a.currency==='CNY'?1:(num(db.rates[a.currency])||0))};
  const selected=db.assets;const total=selected.reduce((s,a)=>s+value(a),0);const year=new Date().getFullYear();const baseline=db.baseline&&db.baseline.year===year?db.baseline:null;
- const profit=baseline?total-num(baseline.amount)-num(baseline.external):null;
+ const flows=(db.flows||[]).filter(f=>f.date>=year+'-01-01'&&f.date<=(year+'-12-31')).reduce((n,f)=>n+(f.type==='存入'?num(f.amount):-num(f.amount)),0);const profit=baseline?total-num(baseline.amount)-num(baseline.external)-flows:null;
  const search=this.data.search.trim().toLowerCase();let assets=selected.filter(a=>!search||(a.name||'').toLowerCase().includes(search)||(a.code||'').toLowerCase().includes(search)||(a.account||'').toLowerCase().includes(search)).map(a=>({...a,value:value(a),displayValue:fmt(value(a)),gain:this.isHolding(a)?(num(a.price)-num(a.cost))*num(a.quantity)*(a.currency==='CNY'?1:num(db.rates[a.currency])):null,returnRate:this.isHolding(a)&&num(a.cost)>0?(num(a.price)/num(a.cost)-1)*100:null,returnText:this.isHolding(a)&&num(a.cost)>0?((num(a.price)/num(a.cost)-1)*100).toFixed(2)+'%':'--'}));
  if(this.data.sort==='收益率')assets.sort((a,b)=>(b.returnRate===null?-Infinity:b.returnRate)-(a.returnRate===null?-Infinity:a.returnRate));else assets.sort((a,b)=>b.value-a.value);
  const groups={};selected.forEach(a=>{const key=this.data.filter==='类型'?a.type:a.account;groups[key]=(groups[key]||0)+value(a)});
- this.setData({assets,accounts:db.accounts,total:fmt(total),viewTotal:this.data.hidden?'••••••':fmt(total),yearProfit:profit===null?'未设置':fmt(profit),yearRate:profit===null?'--':num(baseline.amount)>0?(profit/num(baseline.amount)*100).toFixed(2)+'%':'--',viewYear:this.data.hidden?'••••':profit===null?'未设置':fmt(profit),groups:Object.keys(groups).map(name=>({name,amount:fmt(groups[name]),percent:total>0?(groups[name]/total*100).toFixed(1):'0.0'})).sort((a,b)=>parseFloat(b.percent)-parseFloat(a.percent)),snapshots:db.snapshots.slice().reverse().map(s=>({...s,display:fmt(s.amount)})),rates:Object.keys(db.rates).map(currency=>({currency,rate:db.rates[currency]})),baselineText:baseline?fmt(baseline.amount):'未设置',txList:db.transactions.slice().reverse().slice(0,100).map(t=>({...t,amountText:fmt(t.amount),label:(db.assets.find(a=>a.id===t.assetId)||{}).name||t.assetName||'已移除资产'}))});
+ this.setData({assets,accounts:db.accounts,total:fmt(total),viewTotal:this.data.hidden?'••••••':fmt(total),yearProfit:profit===null?'未设置':fmt(profit),yearRate:profit===null?'--':num(baseline.amount)>0?(profit/num(baseline.amount)*100).toFixed(2)+'%':'--',viewYear:this.data.hidden?'••••':profit===null?'未设置':fmt(profit),groups:Object.keys(groups).map(name=>({name,amount:fmt(groups[name]),percent:total>0?(groups[name]/total*100).toFixed(1):'0.0'})).sort((a,b)=>parseFloat(b.percent)-parseFloat(a.percent)),snapshots:db.snapshots.slice().reverse().map(s=>({...s,display:fmt(s.amount)})),rates:Object.keys(db.rates).map(currency=>({currency,rate:db.rates[currency]})),baselineText:baseline?fmt(baseline.amount):'未设置',yearFlows:fmt(flows),dividendTotal:fmt(db.transactions.filter(t=>t.type==='现金分红'&&t.date.startsWith(year+'-')).reduce((n,t)=>n+num(t.amount)*(t.currency==='CNY'?1:num(db.rates[t.currency])),0)),unpricedCount:selected.filter(a=>a.currency!=='CNY'&&!(num(db.rates[a.currency])>0)).length,flowList:(db.flows||[]).slice().reverse().slice(0,30).map(f=>({...f,display:fmt(f.amount)})),txList:db.transactions.slice().reverse().slice(0,100).map(t=>({...t,amountText:fmt(t.amount),label:(db.assets.find(a=>a.id===t.assetId)||{}).name||t.assetName||'已移除资产'}))});
  },
  isHolding(a){return ['A股','港股','美股','ETF','实物黄金','积存金','黄金ETF','加密货币'].includes(a.type)},
  switchTab(e){this.setData({tab:e.currentTarget.dataset.tab,formOpen:false})},
@@ -44,7 +44,7 @@ Page({
  saveRate(){const rate=Number(this.data.rateValue);if(!(rate>0))return wx.showToast({title:'请输入有效汇率',icon:'none'});if(this.data.rateCurrency==='CNY'&&rate!==1)return wx.showToast({title:'人民币汇率必须为1',icon:'none'});this.db.rates[this.data.rateCurrency]=rate;this.save();wx.showToast({title:'汇率已更新'})},
  onBase(e){this.setData({baseValue:e.detail.value})},
  setBaseline(){const v=Number(this.data.baseValue);if(!Number.isFinite(v)||v<0)return wx.showToast({title:'请输入有效金额',icon:'none'});this.db.baseline={year:new Date().getFullYear(),amount:v,external:0};this.save();wx.showToast({title:'年初基准已保存'})},
- snapshot(){const amount=this.db.assets.reduce((s,a)=>s+(this.isHolding(a)?num(a.quantity)*num(a.price):num(a.balance))*(a.currency==='CNY'?1:num(this.db.rates[a.currency])),0);this.db.snapshots.push({id:id(),date:today(),amount});this.save();wx.showToast({title:'快照已保存'})},
+ snapshot(){const amount=this.db.assets.reduce((s,a)=>s+(this.isHolding(a)?num(a.quantity)*num(a.price):num(a.balance))*(a.currency==='CNY'?1:num(this.db.rates[a.currency])),0);const index=this.db.snapshots.findIndex(s=>s.date===today());const record={id:index>=0?this.db.snapshots[index].id:id(),date:today(),amount};if(index>=0)this.db.snapshots[index]=record;else this.db.snapshots.push(record);this.save();wx.showToast({title:'快照已保存'})},
  toggleAutoMarket(e){this.db.autoMarket=!!e.detail.value;this.setData({autoMarket:this.db.autoMarket});this.save();if(this.db.autoMarket)this.refreshMarket()},
  refreshMarket(){
   if(this.data.marketBusy)return;
@@ -96,11 +96,24 @@ Page({
   if(type==='卖出'&&q>oldQ)return wx.showToast({title:'卖出数量超出持仓',icon:'none'});
   if(type==='买入'){a.cost=(oldQ*oldCost+q*p)/(oldQ+q);a.quantity=oldQ+q}
   if(type==='卖出'){a.quantity=oldQ-q;if(a.quantity===0)a.cost=0}
-  if(type==='送股')a.quantity=oldQ+q;
+  if(type==='送股'){if(oldQ<=0)return wx.showToast({title:'没有持仓可送股',icon:'none'});a.quantity=oldQ+q;a.cost=oldCost*oldQ/a.quantity}
   if(type==='拆分'){if(oldQ<=0)return wx.showToast({title:'没有持仓可拆分',icon:'none'});a.quantity=oldQ+q;a.cost=oldCost*oldQ/a.quantity}
   // 现金分红只记账，不自动增加现金资产，避免凭空重复计入家庭总资产。
   this.db.transactions.push({id:id(),assetId:a.id,assetName:a.name,type,quantity:type==='现金分红'?0:q,price:p,amount:type==='现金分红'?cash:q*p,currency:a.currency,date:this.data.txDate,note:this.data.txNote,createdAt:new Date().toISOString()});
   this.setData({txOpen:false});this.save();wx.showToast({title:'交易已记录'});
+ },
+ flowField(e){this.setData({[e.currentTarget.dataset.field]:e.detail.value})},
+ flowTypeChange(e){this.setData({flowType:['存入','取出'][Number(e.detail.value)]})},
+ addFlow(){
+  const amount=Number(this.data.flowAmount),date=this.data.flowDate;
+  if(!(amount>0)||!Number.isFinite(amount)||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date))return wx.showToast({title:'请检查日期和金额',icon:'none'});
+  this.db.flows=this.db.flows||[];
+  this.db.flows.push({id:id(),date,type:this.data.flowType,amount,note:this.data.flowNote});
+  this.setData({flowAmount:'',flowNote:''});this.save();wx.showToast({title:'资金变动已记录'});
+ },
+ removeFlow(e){
+  const target=e.currentTarget.dataset.id;
+  wx.showModal({title:'删除资金记录',content:'删除后将影响年度收益计算，确认吗？',success:r=>{if(r.confirm){this.db.flows=(this.db.flows||[]).filter(f=>f.id!==target);this.save()}}});
  },
  importField(e){this.setData({importText:e.detail.value})},
  pasteBackup(){wx.getClipboardData({success:r=>this.setData({importText:r.data}),fail:()=>wx.showToast({title:'读取剪贴板失败',icon:'none'})})},
@@ -109,7 +122,7 @@ Page({
   const db=parsed&&parsed.data;
   if(!db||!Array.isArray(db.assets)||!Array.isArray(db.accounts)||!db.rates||typeof db.rates!=='object'||!Array.isArray(db.snapshots)||db.assets.length>20000)return wx.showToast({title:'备份结构不正确',icon:'none'});
   if(db.assets.some(a=>!a||typeof a.name!=='string'||typeof a.type!=='string'||!CURRENCIES.includes(a.currency)))return wx.showToast({title:'资产数据校验失败',icon:'none'});
-  wx.showModal({title:'恢复本地备份',content:'将覆盖本机所有资产、账户和快照。请先导出当前数据！确认恢复吗？',success:r=>{if(!r.confirm)return;db.transactions=Array.isArray(db.transactions)?db.transactions:[];db.rates.CNY=1;this.db=db;this.setData({importText:'',autoMarket:!!db.autoMarket});this.save();wx.showToast({title:'恢复成功'})}});
+  wx.showModal({title:'恢复本地备份',content:'将覆盖本机所有资产、账户和快照。请先导出当前数据！确认恢复吗？',success:r=>{if(!r.confirm)return;db.transactions=Array.isArray(db.transactions)?db.transactions:[];db.flows=Array.isArray(db.flows)?db.flows:[];db.rates.CNY=1;this.db=db;this.setData({importText:'',autoMarket:!!db.autoMarket});this.save();wx.showToast({title:'恢复成功'})}});
  },
- exportData(){const content=JSON.stringify({version:2,exportedAt:new Date().toISOString(),data:this.db});wx.setClipboardData({data:content,success:()=>wx.showModal({title:'备份已复制',content:'JSON 数据已复制到剪贴板，请粘贴到安全位置保存。恢复功能将在后续版本完善。',showCancel:false})})}
+ exportData(){const content=JSON.stringify({version:2,exportedAt:new Date().toISOString(),data:this.db});wx.setClipboardData({data:content,success:()=>wx.showModal({title:'备份已复制',content:'JSON 数据已复制到剪贴板，请粘贴到安全位置保存。恢复前请保留当前备份，以免误覆盖。',showCancel:false})})}
 });
