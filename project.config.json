@@ -2,7 +2,7 @@
   "description": "微信原生小程序资产管理演示",
   "miniprogramRoot": "./",
   "projectname": "my-wechat-miniapp",
-  "appid": "touristappid",
+  "appid": "wxaa56652fd97af059",
   "setting": {
     "es6": true,
     "enhance": true
