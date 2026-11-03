@@ -1,0 +1,10 @@
+{
+  "description": "微信原生小程序资产管理演示",
+  "miniprogramRoot": "./",
+  "projectname": "my-wechat-miniapp",
+  "appid": "touristappid",
+  "setting": {
+    "es6": true,
+    "enhance": true
+  }
+}
