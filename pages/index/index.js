@@ -7,7 +7,7 @@ const fmt=v=>num(v).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFract
 const id=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 function initial(){return {assets:[],accounts:['默认账户'],rates:{CNY:1,USD:1,HKD:1,JPY:1,EUR:1},baseline:null,snapshots:[]}}
 Page({
- data:{tab:'home',types:TYPES,currencies:CURRENCIES,assets:[],accounts:[],total:'0.00',yearProfit:'--',yearRate:'--',hidden:false,filter:'类型',groups:[],formOpen:false,form:{type:'A股',currency:'CNY',account:'默认账户',name:'',code:'',quantity:'',cost:'',price:'',balance:'',rate:'',start:'',maturity:'',note:''},editing:'',search:'',newAccount:'',rateCurrency:'USD',rateValue:'',baseValue:'',snapshotDate:'',snapshots:[],rates:[],viewTotal:'',viewYear:'',notice:'',sort:'收益率',undo:null,marketBusy:false,marketStatus:'行情尚未更新',marketUpdatedAt:'',autoMarket:false},
+ data:{tab:'home',types:TYPES,currencies:CURRENCIES,assets:[],accounts:[],total:'0.00',yearProfit:'--',yearRate:'--',hidden:false,filter:'类型',groups:[],formOpen:false,form:{type:'A股',currency:'CNY',account:'默认账户',name:'',code:'',quantity:'',cost:'',price:'',balance:'',rate:'',start:'',maturity:'',note:''},editing:'',search:'',newAccount:'',rateCurrency:'USD',rateValue:'',baseValue:'',snapshotDate:'',snapshots:[],rates:[],viewTotal:'',viewYear:'',notice:'',sort:'收益率',undo:null,marketBusy:false,marketStatus:'本地存储模式：股票行情可尝试直连，汇率和数字资产价格暂需手动维护',marketUpdatedAt:'',autoMarket:false},
  onLoad(){let db=wx.getStorageSync(KEY);if(!db||!Array.isArray(db.assets)){db=initial();const old=wx.getStorageSync(OLD)||[];db.assets=old.map(a=>({id:id(),type:'现金',name:a.name,account:'默认账户',currency:'CNY',balance:num(a.amount)}));wx.setStorageSync(KEY,db)}this.db=db;this.setData({autoMarket:!!db.autoMarket});this.refresh()},
  onShow(){if(this.db){this.refresh();if(this.db.autoMarket)this.refreshMarket()}},
  save(){wx.setStorageSync(KEY,this.db);this.refresh()},
@@ -46,38 +46,40 @@ Page({
  setBaseline(){const v=Number(this.data.baseValue);if(!Number.isFinite(v)||v<0)return wx.showToast({title:'请输入有效金额',icon:'none'});this.db.baseline={year:new Date().getFullYear(),amount:v,external:0};this.save();wx.showToast({title:'年初基准已保存'})},
  snapshot(){const amount=this.db.assets.reduce((s,a)=>s+(this.isHolding(a)?num(a.quantity)*num(a.price):num(a.balance))*num(this.db.rates[a.currency]||1),0);this.db.snapshots.push({id:id(),date:today(),amount});this.save();wx.showToast({title:'快照已保存'})},
  toggleAutoMarket(e){this.db.autoMarket=!!e.detail.value;this.setData({autoMarket:this.db.autoMarket});this.save();if(this.db.autoMarket)this.refreshMarket()},
- async refreshMarket(){
+ refreshMarket(){
   if(this.data.marketBusy)return;
-  if(!wx.cloud || !wx.cloud.callFunction){this.setData({marketStatus:'未初始化云开发，请先部署行情云函数'});return}
-  this.setData({marketBusy:true,marketStatus:'正在获取行情…'});
-  const stocks=this.db.assets.filter(a=>this.isHolding(a)&&a.code&&['A股','港股','美股','ETF','黄金ETF','加密货币'].includes(a.type));
-  const normalize=a=>{let c=String(a.code||'').trim().toUpperCase();if(a.type==='加密货币'&&!c.includes('.'))c+='.CRYPTO';return c};
-  const codes=[...new Set(stocks.map(normalize))];
-  let updated=0,errors=[],fxOk=false;
-  try{
-   const fx=await wx.cloud.callFunction({name:'market',data:{action:'fx'}});
-   const result=fx.result||{};
-   if(result.ok&&result.rates){
-    for(const [currency,rate] of Object.entries(result.rates))if(Number(rate)>0){this.db.rates[currency]=Number(rate);fxOk=true}
-   }else errors.push('汇率：'+(result.error||'不可用'));
-  }catch(e){errors.push('汇率请求失败')}
-  for(let i=0;i<codes.length;i+=50){
-   try{
-    const res=await wx.cloud.callFunction({name:'market',data:{action:'quotes',symbols:codes.slice(i,i+50)}});
-    const result=res.result||{};
-    if(!result.ok){errors.push(result.error||'行情请求失败');continue}
-    for(const a of stocks){
-     const quote=(result.quotes||{})[normalize(a)];
-     if(quote&&Number(quote.price)>0&&quote.currency===a.currency){
-      a.price=Number(quote.price);a.quoteUpdatedAt=quote.updatedAt;updated++;
+  const holdings=this.db.assets.filter(a=>this.isHolding(a)&&a.code&&['A股','港股','美股','ETF','黄金ETF'].includes(a.type));
+  const code=a=>{const c=String(a.code||'').trim().toUpperCase();if(/^\\d{6}\\.SH$/.test(c))return 'sh'+c.slice(0,6);if(/^\\d{6}\\.SZ$/.test(c))return 'sz'+c.slice(0,6);if(/^\\d{1,5}\\.HK$/.test(c))return 'hk'+c.split('.')[0].padStart(5,'0');if(/^[A-Z.\\-]+\\.US$/.test(c))return 'us'+c.slice(0,-3);return ''};
+  const valid=holdings.filter(a=>code(a));
+  if(!valid.length){this.setData({marketStatus:'没有可自动查询的股票代码；可在资产编辑页手动填写价格'});return}
+  this.setData({marketBusy:true,marketStatus:'正在直连腾讯行情（无需云服务）…'});
+  const symbols=[...new Set(valid.map(code))];
+  wx.request({
+   url:'https://qt.gtimg.cn/q='+symbols.join(','),method:'GET',responseType:'arraybuffer',
+   success:res=>{
+    try{
+     const decoder=typeof TextDecoder!=='undefined'?new TextDecoder('gbk'):null;
+     if(!decoder)throw Error('当前基础库不支持 GBK 解码');
+     const body=decoder.decode(res.data), now=new Date().toISOString();
+     let count=0;
+     for(const a of valid){
+      const symbol=code(a);
+      const line=body.split(';').find(x=>x.includes('v_'+symbol+'='));
+      if(!line)continue;
+      const match=line.match(/="([^"]*)"/);
+      if(!match)continue;
+      const price=Number(match[1].split('~')[3]);
+      const currency=symbol.startsWith('us')?'USD':symbol.startsWith('hk')?'HKD':'CNY';
+      if(price>0&&a.currency===currency){a.price=price;a.quoteUpdatedAt=now;count++}
      }
-    }
-    if(Object.keys(result.errors||{}).length)errors.push(Object.keys(result.errors).length+'个代码未取得报价');
-   }catch(e){errors.push('行情请求失败')}
-  }
-  if(updated||fxOk){this.db.lastMarketUpdate=new Date().toISOString();wx.setStorageSync(KEY,this.db)}
-  this.setData({marketBusy:false,marketUpdatedAt:this.db.lastMarketUpdate||'',marketStatus:'已更新'+updated+'项资产'+(fxOk?'，汇率已刷新':'')+(errors.length?'；'+errors.join('；'):'')});
-  this.refresh();
+     if(count){this.db.lastMarketUpdate=now;wx.setStorageSync(KEY,this.db)}
+     this.setData({marketStatus:count?'成功更新 '+count+' 项；其余资产价格保持不变':'未获取有效报价，请检查代码、币种及接口',marketUpdatedAt:count?now:this.data.marketUpdatedAt});
+     this.refresh();
+    }catch(e){this.setData({marketStatus:'行情解析失败：'+e.message+'；请手动更新价格'})}
+   },
+   fail:()=>this.setData({marketStatus:'直连行情失败。请在开发者工具配置合法域名，或手动填写价格'}),
+   complete:()=>this.setData({marketBusy:false})
+  });
  },
  exportData(){const content=JSON.stringify({version:1,exportedAt:new Date().toISOString(),data:this.db});wx.setClipboardData({data:content,success:()=>wx.showModal({title:'备份已复制',content:'JSON 数据已复制到剪贴板，请粘贴到安全位置保存。恢复功能将在后续版本完善。',showCancel:false})})}
 });
