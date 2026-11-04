@@ -62,14 +62,14 @@ Page({
   this.setData({marketBusy:true,marketStatus:'正在通过微信云开发查询行情…'});
   wx.cloud.callFunction({name:'quotes',data:{assets:holdings},success:r=>{
    const result=r.result||{};if(!result.ok){this.setData({marketStatus:'云函数未返回有效行情，原价格保持不变'});return}
-   let count=0;const quotes=result.quotes||{};
-   for(const asset of this.db.assets){const quote=quotes[asset.id];if(!quote||!(Number(quote.price)>0))continue;
-    if(asset.currency!==quote.currency){if(!asset.quoteUpdatedAt&&(!asset.currency||asset.currency==='CNY'))asset.currency=quote.currency;else continue}
+   let count=0;const quotes=result.quotes||{};const missingAssets=[];
+   for(const asset of this.db.assets){const quote=quotes[asset.id];if(!quote||!(Number(quote.price)>0)){if(['美股','港股'].includes(asset.type)&&asset.code)missingAssets.push(asset.code);continue;}
+    if(asset.currency!==quote.currency){if(asset.type==='美股'||asset.type==='港股'||!asset.quoteUpdatedAt){asset.currency=quote.currency}else{continue}}
     asset.price=Number(quote.price);if(quote.name&&!asset.name)asset.name=quote.name;asset.quoteUpdatedAt=quote.fetchedAt;count++;
    }
    let rateCount=0;if(result.rates){for(const [currency,rate] of Object.entries(result.rates)){if(currency==='CNY')continue;if(Number(rate)>0){this.db.rates[currency]=Number(rate);rateCount++}}}
    if(count||rateCount){this.db.lastMarketUpdate=result.fetchedAt;this.save()}
-   this.setData({marketStatus:'更新报价 '+count+' 项、参考汇率 '+rateCount+' 项'+(result.errors&&result.errors.length?'；'+result.errors.join('；'):'')+'。报价可能延迟。',marketUpdatedAt:result.fetchedAt||''});this.refresh();
+   this.setData({marketStatus:'更新报价 '+count+' 项、参考汇率 '+rateCount+' 项'+(result.errors&&result.errors.length?'；'+result.errors.join('；'):'')+(missingAssets.length?'；未获取：'+missingAssets.slice(0,8).join('、'):'')+'。报价可能延迟。',marketUpdatedAt:result.fetchedAt||''});this.refresh();
   },fail:e=>{this.setData({marketStatus:'云函数调用失败：请确认 quotes 已部署至云环境；原价格保持不变'})},complete:()=>this.setData({marketBusy:false})});
  },
 
