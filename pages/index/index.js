@@ -8,7 +8,7 @@ const validDate=v=>{if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(v))return false;cons
 const id=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 function initial(){return {assets:[],accounts:['默认账户'],rates:{CNY:1,USD:0,HKD:0,JPY:0,EUR:0},baseline:null,snapshots:[],transactions:[]}}
 Page({
- data:{tab:'home',types:TYPES,currencies:CURRENCIES,assets:[],accounts:[],total:'0.00',yearProfit:'--',yearRate:'--',hidden:false,filter:'类型',groups:[],formOpen:false,form:{type:'A股',currency:'CNY',account:'默认账户',name:'',code:'',quantity:'',cost:'',price:'',balance:'',rate:'',start:'',maturity:'',note:''},editing:'',search:'',newAccount:'',rateCurrency:'USD',rateValue:'',baseValue:'',snapshotDate:'',snapshots:[],rates:[],viewTotal:'',viewYear:'',notice:'',sort:'收益率',undo:null,marketBusy:false,marketStatus:'本地存储模式：股票行情可尝试直连，汇率和数字资产价格暂需手动维护',marketUpdatedAt:'',autoMarket:false,txTypes:['买入','卖出','现金分红','送股','拆分'],txOpen:false,txAsset:'',txType:'买入',txQuantity:'',txPrice:'',txCash:'',txDate:today(),txNote:'',txList:[],importText:'',flowTypes:['存入','取出'],flowType:'存入',flowAmount:'',flowDate:today(),flowNote:'',flowList:[],yearFlows:'0.00',dividendTotal:'0.00',unpricedCount:0,assetFilter:'全部',filterTypes:['全部'].concat(TYPES),accountFilter:'全部',search:'',snapshotCount:0,assetCount:0,txSearch:'',txTypeFilter:'全部',txFilterTypes:['全部','买入','卖出','现金分红','送股','拆分'],txShown:50,flowEditing:'',},
+ data:{tab:'home',types:TYPES,currencies:CURRENCIES,assets:[],accounts:[],total:'0.00',yearProfit:'--',yearRate:'--',hidden:false,filter:'类型',groups:[],formOpen:false,form:{type:'A股',currency:'CNY',account:'默认账户',name:'',code:'',quantity:'',cost:'',price:'',balance:'',rate:'',start:'',maturity:'',note:''},editing:'',search:'',newAccount:'',rateCurrency:'USD',rateValue:'',baseValue:'',snapshotDate:'',snapshots:[],rates:[],viewTotal:'',viewYear:'',notice:'',sort:'收益率',undo:null,marketBusy:false,marketStatus:'云行情支持A股、美股、港股、BTC/ETH及参考汇率；需先部署 quotes 云函数',marketUpdatedAt:'',autoMarket:false,txTypes:['买入','卖出','现金分红','送股','拆分'],txOpen:false,txAsset:'',txType:'买入',txQuantity:'',txPrice:'',txCash:'',txDate:today(),txNote:'',txList:[],importText:'',flowTypes:['存入','取出'],flowType:'存入',flowAmount:'',flowDate:today(),flowNote:'',flowList:[],yearFlows:'0.00',dividendTotal:'0.00',unpricedCount:0,assetFilter:'全部',filterTypes:['全部'].concat(TYPES),accountFilter:'全部',search:'',snapshotCount:0,assetCount:0,txSearch:'',txTypeFilter:'全部',txFilterTypes:['全部','买入','卖出','现金分红','送股','拆分'],txShown:50,flowEditing:'',},
  onLoad(){let db=wx.getStorageSync(KEY);if(!db||!Array.isArray(db.assets)){db=initial();const old=wx.getStorageSync(OLD)||[];db.assets=old.map(a=>({id:id(),type:'现金',name:a.name,account:'默认账户',currency:'CNY',balance:num(a.amount)}));wx.setStorageSync(KEY,db)}db.transactions=db.transactions||[];db.flows=db.flows||[];db.snapshots=db.snapshots||[];db.accounts=db.accounts&&db.accounts.length?db.accounts:['默认账户'];db.rates=db.rates||{CNY:1};db.rates.CNY=1;this.db=db;this.setData({autoMarket:!!db.autoMarket,marketUpdatedAt:db.lastMarketUpdate||''});this.refresh()},
  onShow(){if(this.db){this.refresh();if(this.db.autoMarket)this.refreshMarket()}},
  save(){wx.setStorageSync(KEY,this.db);this.refresh()},
@@ -55,38 +55,21 @@ Page({
  toggleAutoMarket(e){this.db.autoMarket=!!e.detail.value;this.setData({autoMarket:this.db.autoMarket});this.save();if(this.db.autoMarket)this.refreshMarket()},
  refreshMarket(){
   if(this.data.marketBusy)return;
-  const holdings=this.db.assets.filter(a=>this.isHolding(a)&&a.code&&['A股','港股','美股','ETF','黄金ETF'].includes(a.type));
-  const code=a=>{const c=String(a.code||'').trim().toUpperCase();if(/^[0-9]{6}[.]SH$/.test(c))return 'sh'+c.slice(0,6);if(/^[0-9]{6}[.]SZ$/.test(c))return 'sz'+c.slice(0,6);if(/^[0-9]{1,5}[.]HK$/.test(c))return 'hk'+c.split('.')[0].padStart(5,'0');if(/^[A-Z.-]+[.]US$/.test(c))return 'us'+c.slice(0,-3);return ''};
-  const valid=holdings.filter(a=>code(a));
-  if(!valid.length){this.setData({marketStatus:'没有可自动查询的股票代码；可在资产编辑页手动填写价格'});return}
-  this.setData({marketBusy:true,marketStatus:'正在直连腾讯行情（无需云服务）…'});
-  const symbols=[...new Set(valid.map(code))];
-  wx.request({
-   url:'https://qt.gtimg.cn/q='+symbols.join(','),method:'GET',responseType:'arraybuffer',
-   success:res=>{
-    try{
-     const decoder=typeof TextDecoder!=='undefined'?new TextDecoder('gbk'):null;
-     if(!decoder)throw Error('当前基础库不支持 GBK 解码');
-     const body=decoder.decode(res.data), now=new Date().toISOString();
-     let count=0;
-     for(const a of valid){
-      const symbol=code(a);
-      const line=body.split(';').find(x=>x.includes('v_'+symbol+'='));
-      if(!line)continue;
-      const match=line.match(/="([^"]*)"/);
-      if(!match)continue;
-      const price=Number(match[1].split('~')[3]);
-      const currency=symbol.startsWith('us')?'USD':symbol.startsWith('hk')?'HKD':'CNY';
-      if(price>0&&a.currency===currency){a.price=price;a.quoteUpdatedAt=now;count++}
-     }
-     if(count){this.db.lastMarketUpdate=now;wx.setStorageSync(KEY,this.db)}
-     this.setData({marketStatus:count?'成功更新 '+count+' 项；其余资产价格保持不变':'未获取有效报价，请检查代码、币种及接口',marketUpdatedAt:count?now:this.data.marketUpdatedAt});
-     this.refresh();
-    }catch(e){this.setData({marketStatus:'行情解析失败：'+e.message+'；请手动更新价格'})}
-   },
-   fail:()=>this.setData({marketStatus:'直连行情失败。请在开发者工具配置合法域名，或手动填写价格'}),
-   complete:()=>this.setData({marketBusy:false})
-  });
+  const holdings=this.db.assets.filter(a=>this.isHolding(a)&&a.code&&['A股','港股','美股','ETF','黄金ETF','加密货币'].includes(a.type)).map(a=>({id:a.id,type:a.type,code:a.code}));
+  if(!holdings.length){this.setData({marketStatus:'没有可查询的资产代码；请在资产编辑中填写代码'});return}
+  if(!wx.cloud||!wx.cloud.callFunction){this.setData({marketStatus:'当前微信基础库不支持云函数'});return}
+  this.setData({marketBusy:true,marketStatus:'正在通过微信云开发查询行情…'});
+  wx.cloud.callFunction({name:'quotes',data:{assets:holdings},success:r=>{
+   const result=r.result||{};if(!result.ok){this.setData({marketStatus:'云函数未返回有效行情，原价格保持不变'});return}
+   let count=0;const quotes=result.quotes||{};
+   for(const asset of this.db.assets){const quote=quotes[asset.id];if(!quote||!(Number(quote.price)>0))continue;
+    if(asset.currency!==quote.currency){if(!asset.quoteUpdatedAt&&(!asset.currency||asset.currency==='CNY'))asset.currency=quote.currency;else continue}
+    asset.price=Number(quote.price);if(quote.name&&!asset.name)asset.name=quote.name;asset.quoteUpdatedAt=quote.fetchedAt;count++;
+   }
+   let rateCount=0;if(result.rates){for(const [currency,rate] of Object.entries(result.rates)){if(currency==='CNY')continue;if(Number(rate)>0){this.db.rates[currency]=Number(rate);rateCount++}}}
+   if(count||rateCount){this.db.lastMarketUpdate=result.fetchedAt;this.save()}
+   this.setData({marketStatus:'更新报价 '+count+' 项、参考汇率 '+rateCount+' 项'+(result.errors&&result.errors.length?'；'+result.errors.join('；'):'')+'。报价可能延迟。',marketUpdatedAt:result.fetchedAt||''});this.refresh();
+  },fail:e=>{this.setData({marketStatus:'云函数调用失败：请确认 quotes 已部署至云环境；原价格保持不变'})},complete:()=>this.setData({marketBusy:false})});
  },
  openTransaction(e){const a=this.db.assets.find(x=>x.id===e.currentTarget.dataset.id);if(!a||!this.isHolding(a))return;this.setData({txOpen:true,txAsset:a.id,txType:'买入',txQuantity:'',txPrice:String(a.price||''),txCash:'',txDate:today(),txNote:''})},
  txField(e){this.setData({[e.currentTarget.dataset.field]:e.detail.value})},
