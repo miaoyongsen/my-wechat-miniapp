@@ -2,3 +2,5 @@
 .hero .up{color:#ff5757}.hero .down{color:#22c77b}.hero .flat{color:#dce5f3}.dailyRate{font-size:32rpx;font-weight:700;margin-bottom:20rpx}.totalBottom{background:#13233f;color:#fff;padding:38rpx 36rpx}.totalAmount{font-size:52rpx;font-weight:700;margin-top:18rpx}
 
 .addFab{position:fixed;right:30rpx;bottom:calc(145rpx + env(safe-area-inset-bottom));width:104rpx;height:104rpx;border-radius:52rpx;background:#2566cb;color:#fff;font-size:76rpx;font-weight:300;display:flex;align-items:center;justify-content:center;box-shadow:0 10rpx 26rpx #123a7860;z-index:6;line-height:1}
+
+.yearGain{font-size:52rpx;font-weight:700;margin:8rpx 0 12rpx}.yearGainRate{font-size:28rpx;font-weight:600}.yearGain.up,.yearGainRate.up{color:#e5484d}.yearGain.down,.yearGainRate.down{color:#149e63}.yearGain.flat,.yearGainRate.flat{color:#66758b}
