@@ -1,5 +1,5 @@
 const KEY='family_assets_v1', OLD='asset_demo_v1';
-const TYPES=['A股','港股','美股','ETF','实物黄金','积存金','黄金ETF','银行活期','银行定期','外币','加密货币','现金'];
+const TYPES=['A股','港股','美股','ETF','实物黄金','黄金ETF','银行活期','银行定期','外币','加密货币','现金'];
 const CURRENCIES=['CNY','USD','HKD','JPY','EUR'];
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const num=v=>Number(v)||0;
@@ -56,7 +56,7 @@ Page({
  toggleAutoMarket(e){this.db.autoMarket=!!e.detail.value;this.setData({autoMarket:this.db.autoMarket});this.save();if(this.db.autoMarket)this.refreshMarket()},
  refreshMarket(){
   if(this.data.marketBusy)return;
-  const holdings=this.db.assets.filter(a=>this.isHolding(a)&&a.code&&['A股','港股','美股','ETF','黄金ETF','加密货币'].includes(a.type)).map(a=>({id:a.id,type:a.type,code:a.code}));
+  const holdings=this.db.assets.filter(a=>this.isHolding(a)&&(a.code||a.type==='实物黄金')&&['A股','港股','美股','ETF','黄金ETF','加密货币','实物黄金'].includes(a.type)).map(a=>({id:a.id,type:a.type,code:a.code}));
   if(!holdings.length){this.setData({marketStatus:'没有可查询的资产代码；请在资产编辑中填写代码'});return}
   if(!wx.cloud||!wx.cloud.callFunction){this.setData({marketStatus:'当前微信基础库不支持云函数'});return}
   this.setData({marketBusy:true,marketStatus:'正在通过微信云开发查询行情…'});
@@ -64,7 +64,7 @@ Page({
    const result=r.result||{};if(!result.ok){this.setData({marketStatus:'云函数未返回有效行情，原价格保持不变'});return}
    let count=0;const quotes=result.quotes||{};const missingAssets=[];
    for(const asset of this.db.assets){const quote=quotes[asset.id];if(!quote||!(Number(quote.price)>0)){if(['美股','港股'].includes(asset.type)&&asset.code)missingAssets.push(asset.code);continue;}
-    if(asset.currency!==quote.currency){if(asset.type==='美股'||asset.type==='港股'||!asset.quoteUpdatedAt){asset.currency=quote.currency}else{continue}}
+    if(asset.currency!==quote.currency){if(asset.type==='美股'||asset.type==='港股'||asset.type==='实物黄金'||!asset.quoteUpdatedAt){asset.currency=quote.currency}else{continue}}
     asset.price=Number(quote.price);if(quote.name&&!asset.name)asset.name=quote.name;asset.quoteUpdatedAt=quote.fetchedAt;count++;
    }
    let rateCount=0;if(result.rates){for(const [currency,rate] of Object.entries(result.rates)){if(currency==='CNY')continue;if(Number(rate)>0){this.db.rates[currency]=Number(rate);rateCount++}}}
