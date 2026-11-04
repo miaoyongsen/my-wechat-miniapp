@@ -38,7 +38,7 @@ jobs:
               type: 'miniProgram',
               projectPath: process.cwd(),
               privateKeyPath: '/tmp/wechat-upload.key',
-              ignores: ['node_modules/**/*', '.git/**/*', '.github/**/*']
+              ignores: ['node_modules/**/*', '.git/**/*', '.github/**/*', 'cloudfunctions/**/*']
             });
             await ci.upload({
               project,
