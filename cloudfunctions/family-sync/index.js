@@ -24,7 +24,7 @@ exports.main=async event=>{
   try{const f=(await ref.get()).data;if(f.members.includes(openid))return {ok:true,joined:true,revision:f.revision};
    if(f.members.length>=2)return fail('FULL','家庭成员已达两人');
    if(Date.now()>f.inviteUntil||digest(code)!==f.inviteHash)return fail('BAD_CODE','邀请码错误或已过期');
-   const r=await ref.where({revision:f.revision,inviteHash:f.inviteHash}).update({data:{members:_.push(openid),inviteHash:'',inviteUntil:0}});
+   const r=await db.collection(COL).where({_id:FAMILY,revision:f.revision,inviteHash:f.inviteHash}).update({data:{members:_.push(openid),inviteHash:'',inviteUntil:0}});
    if(!r.stats.updated)return fail('CONFLICT','邀请码已被使用，请重新生成');return {ok:true,joined:true,revision:f.revision}
   }catch(e){return fail('DB_ERROR','加入失败：'+e.message)}
  }
@@ -33,7 +33,7 @@ exports.main=async event=>{
   if(!payload||typeof payload!=='object'||!Array.isArray(payload.assets)||!Array.isArray(payload.accounts)||!Array.isArray(payload.snapshots)||!Array.isArray(payload.transactions||[])||!Array.isArray(payload.flows||[])||!payload.rates||!Number.isInteger(revision)||revision<0)return fail('INVALID','数据格式不正确');
   if(JSON.stringify(payload).length>800000)return fail('TOO_LARGE','数据超过云端单次保存限制');
   try{const f=(await ref.get()).data;if(!f.members.includes(openid))return fail('UNAUTHORIZED','无权写入家庭数据');
-   const result=await ref.where({revision}).update({data:{data:payload,revision:_.inc(1),updatedAt:db.serverDate(),updatedBy:openid}});
+   const result=await db.collection(COL).where({_id:FAMILY,revision}).update({data:{data:payload,revision:_.inc(1),updatedAt:db.serverDate(),updatedBy:openid}});
    if(!result.stats.updated)return fail('CONFLICT','云端已有更新，请先同步，避免覆盖其他设备');
    return {ok:true,revision:revision+1}
   }catch(e){return fail('DB_ERROR','保存失败：'+e.message)}
