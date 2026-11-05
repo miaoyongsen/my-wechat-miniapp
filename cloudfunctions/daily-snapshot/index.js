@@ -1,0 +1,14 @@
+const cloud=require('wx-server-sdk');cloud.init({env:cloud.DYNAMIC_CURRENT_ENV});
+const db=cloud.database(),col=db.collection('family_assets_private'),ID='household-v1';
+const num=v=>Number(v)||0;
+const holding=t=>['A股','港股','美股','ETF','实物黄金','积存金','黄金ETF','加密货币'].includes(t);
+exports.main=async()=>{const now=new Date(Date.now()+8*3600000),date=now.toISOString().slice(0,10);
+try{const doc=(await col.doc(ID).get()).data;if(!doc||!doc.data)return {ok:false,message:'云端尚无资产数据'};
+const data=doc.data;if(!Array.isArray(data.assets)||!Array.isArray(data.snapshots))return {ok:false,message:'云端数据格式错误'};
+const rates=data.rates||{};const missing=data.assets.filter(a=>a.currency&&a.currency!=='CNY'&&!(num(rates[a.currency])>0));if(missing.length)return {ok:false,message:'缺少汇率，快照未写入',currencies:[...new Set(missing.map(a=>a.currency))]};
+const amount=data.assets.reduce((s,a)=>s+(holding(a.type)?num(a.quantity)*num(a.price):num(a.balance))*(a.currency==='CNY'||!a.currency?1:num(rates[a.currency])),0);
+const old=data.snapshots.find(s=>s.date===date);const record={id:old?old.id:'auto-'+date,date,amount};
+data.snapshots=old?data.snapshots.map(s=>s.date===date?record:s):[...data.snapshots,record];
+const result=await col.where({_id:ID,revision:doc.revision}).update({data:{data,revision:db.command.inc(1),updatedAt:db.serverDate()}});
+return result.stats.updated?{ok:true,date,amount,message:'23:50云端资产快照已保存'}:{ok:false,message:'版本冲突，本次未覆盖，请重试'};
+}catch(e){return {ok:false,message:e.message||String(e)}}};
