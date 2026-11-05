@@ -51,7 +51,7 @@ Page({
  saveRate(){const rate=Number(this.data.rateValue);if(!(rate>0))return wx.showToast({title:'请输入有效汇率',icon:'none'});if(this.data.rateCurrency==='CNY'&&rate!==1)return wx.showToast({title:'人民币汇率必须为1',icon:'none'});this.db.rates[this.data.rateCurrency]=rate;this.save();wx.showToast({title:'汇率已更新'})},
  onBase(e){this.setData({baseValue:e.detail.value})},
  setBaseline(){const v=Number(this.data.baseValue);if(!Number.isFinite(v)||v<0)return wx.showToast({title:'请输入有效金额',icon:'none'});this.db.baseline={year:new Date().getFullYear(),amount:v,external:0};this.save();wx.showToast({title:'年初基准已保存'})},
- snapshot(){if(this.db.assets.some(a=>a.currency!=='CNY'&&!(num(this.db.rates[a.currency])>0)))return wx.showToast({title:'请先补齐外币汇率',icon:'none'});const amount=this.db.assets.reduce((s,a)=>s+(this.isHolding(a)?num(a.quantity)*num(a.price):num(a.balance))*(a.currency==='CNY'?1:num(this.db.rates[a.currency])),0);const index=this.db.snapshots.findIndex(s=>s.date===today());const record={id:index>=0?this.db.snapshots[index].id:id(),date:today(),amount};if(index>=0)this.db.snapshots[index]=record;else this.db.snapshots.push(record);this.save();wx.showToast({title:'快照已保存'})},
+ snapshot(silent=false){if(this.db.assets.some(a=>a.currency!=='CNY'&&!(num(this.db.rates[a.currency])>0)))return silent?false:wx.showToast({title:'请先补齐外币汇率',icon:'none'});const amount=this.db.assets.reduce((s,a)=>s+(this.isHolding(a)?num(a.quantity)*num(a.price):num(a.balance))*(a.currency==='CNY'?1:num(this.db.rates[a.currency])),0);const index=this.db.snapshots.findIndex(s=>s.date===today());const record={id:index>=0?this.db.snapshots[index].id:id(),date:today(),amount};if(index>=0)this.db.snapshots[index]=record;else this.db.snapshots.push(record);this.save();if(!silent)wx.showToast({title:'快照已保存'});return true},
  removeSnapshot(e){const key=e.currentTarget.dataset.id;wx.showModal({title:'删除快照',content:'确认删除该日快照吗？',success:r=>{if(r.confirm){this.db.snapshots=this.db.snapshots.filter(x=>x.id!==key);this.save()}}})},
  toggleAutoMarket(e){this.db.autoMarket=!!e.detail.value;this.setData({autoMarket:this.db.autoMarket});this.save();if(this.db.autoMarket)this.refreshMarket()},
  refreshMarket(){
@@ -68,8 +68,8 @@ Page({
     asset.price=Number(quote.price);if(quote.name&&!asset.name)asset.name=quote.name;asset.quoteUpdatedAt=quote.fetchedAt;count++;
    }
    let rateCount=0;if(result.rates){for(const [currency,rate] of Object.entries(result.rates)){if(currency==='CNY')continue;if(Number(rate)>0){this.db.rates[currency]=Number(rate);rateCount++}}}
-   if(count||rateCount){this.db.lastMarketUpdate=result.fetchedAt;this.save()}
-   this.setData({marketStatus:'更新报价 '+count+' 项、参考汇率 '+rateCount+' 项'+(result.errors&&result.errors.length?'；'+result.errors.join('；'):'')+(missingAssets.length?'；未获取：'+missingAssets.slice(0,8).join('、'):'')+'。报价可能延迟。',marketUpdatedAt:result.fetchedAt||''});this.refresh();
+   if(count||rateCount){this.db.lastMarketUpdate=result.fetchedAt;this.save()}const snapped=this.snapshot(true);
+   this.setData({marketStatus:'更新报价 '+count+' 项、参考汇率 '+rateCount+' 项'+(result.errors&&result.errors.length?'；'+result.errors.join('；'):'')+(missingAssets.length?'；未获取：'+missingAssets.slice(0,8).join('、'):'')+(snapped?'；今日资产快照已保存':'；快照未保存，请检查外币汇率')+'。报价可能延迟。',marketUpdatedAt:result.fetchedAt||''});this.refresh();
   },fail:e=>{this.setData({marketStatus:'云函数调用失败：请确认 quotes 已部署至云环境；原价格保持不变'})},complete:()=>this.setData({marketBusy:false})});
  },
 
