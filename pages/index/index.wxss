@@ -4,3 +4,33 @@
 .addFab{position:fixed;right:30rpx;bottom:calc(145rpx + env(safe-area-inset-bottom));width:104rpx;height:104rpx;border-radius:52rpx;background:#2566cb;color:#fff;font-size:76rpx;font-weight:300;display:flex;align-items:center;justify-content:center;box-shadow:0 10rpx 26rpx #123a7860;z-index:6;line-height:1}
 
 .yearGain{font-size:52rpx;font-weight:700;margin:8rpx 0 12rpx}.yearGainRate{font-size:28rpx;font-weight:600}.yearGain.up,.yearGainRate.up{color:#e5484d}.yearGain.down,.yearGainRate.down{color:#149e63}.yearGain.flat,.yearGainRate.flat{color:#66758b}
+
+/* 2026 clean dashboard */
+.page{background:#f6f8fb;min-height:100vh;box-sizing:border-box;padding:24rpx 26rpx 176rpx;color:#17243a}
+.nav{padding:16rpx 4rpx 36rpx}.brand{font-size:38rpx;font-weight:750;letter-spacing:1rpx}.eye{color:#718098}
+.dashboard{padding-top:8rpx}
+.dashHero{background:#fff;border:1rpx solid #edf0f4;border-radius:28rpx;padding:42rpx 36rpx 38rpx;margin-bottom:20rpx}
+.dashEyebrow{font-size:23rpx;color:#8b97a8;letter-spacing:2rpx;font-weight:600}
+.dashProfit{font-size:76rpx;font-weight:750;letter-spacing:-2rpx;margin-top:26rpx;line-height:1.2}
+.dashRate{font-size:34rpx;font-weight:650;margin-top:14rpx}
+.dashProfit.up,.dashRate.up{color:#dc3f4a}.dashProfit.down,.dashRate.down{color:#15966c}.dashProfit.flat,.dashRate.flat{color:#27364d}
+.dashHint{font-size:22rpx;color:#9ca6b5;margin-top:34rpx;line-height:1.6}
+.dashGrid{display:flex;gap:18rpx;margin-bottom:20rpx}
+.dashTile{flex:1;min-width:0;background:#fff;border:1rpx solid #edf0f4;border-radius:24rpx;padding:30rpx 24rpx;box-sizing:border-box}
+.dashLabel{font-size:23rpx;color:#8995a5;font-weight:550}
+.dashNumber{font-size:38rpx;color:#19283d;font-weight:750;margin-top:20rpx;white-space:nowrap}
+.dashFoot{font-size:21rpx;color:#a3adba;margin-top:12rpx;line-height:1.5}
+.dashUsage{background:#fff;border:1rpx solid #edf0f4;border-radius:24rpx;padding:32rpx;margin-bottom:20rpx}
+.dashUsageHead{display:flex;align-items:center;justify-content:space-between}
+.dashUsageValue{font-size:42rpx;font-weight:750;color:#2568d8}
+.dashTrack{height:14rpx;background:#edf2f8;border-radius:20rpx;overflow:hidden;margin-top:30rpx}
+.dashTrackFill{height:100%;background:#3d7bea;border-radius:20rpx}
+.dashRefresh{display:flex;justify-content:space-between;align-items:center;padding:30rpx 32rpx;background:#fff;border:1rpx solid #edf0f4;border-radius:24rpx}
+.dashRefreshTitle{font-size:28rpx;font-weight:650}.dashRefreshArrow{font-size:40rpx;color:#286bdb}
+.dashTimestamp,.dashStatus{font-size:21rpx;color:#98a4b2;padding:12rpx 10rpx 0;line-height:1.6}
+.assetRow{background:#fff;border-bottom:1rpx solid #eef1f5;padding:25rpx 26rpx 18rpx;margin-bottom:0}
+.assetRow:first-of-type{border-radius:22rpx 22rpx 0 0}
+.assetRow .assetMain{gap:16rpx}.assetRow .assetName{font-size:29rpx}.assetRow .assetRight{font-size:29rpx}
+.assetRow .assetActions{margin-top:16rpx;padding-top:14rpx;border-color:#f5f6f8;gap:32rpx}
+.tabs{border-top:1rpx solid #edf0f4;box-shadow:none;padding:24rpx 0 40rpx}
+.tabs .active{color:#1c5ed2}.addFab{background:#2668da;box-shadow:0 8rpx 22rpx #2b5fba35}
