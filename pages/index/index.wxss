@@ -55,3 +55,5 @@
 .assetReturn.up{color:#df4250}.assetReturn.down{color:#12976a}.assetReturn.flat{color:#8a97a8}
 .assetCurrency{font-size:21rpx;color:#a0aab8;margin-top:4rpx}
 .accountContents .assetActions{font-size:25rpx}
+
+.assetInterest{font-size:24rpx;color:#d94350;font-weight:650;margin-top:8rpx}
