@@ -1,5 +1,5 @@
 const KEY='family_assets_v1', OLD='asset_demo_v1';
-const TYPES=['A股','港股','美股','ETF','实物黄金','黄金ETF','银行活期','银行定期','外币','加密货币','现金'];
+const TYPES=['A股','港股','美股','ETF','场外基金','实物黄金','黄金ETF','银行活期','银行定期','外币','加密货币','现金'];
 const CURRENCIES=['CNY','USD','HKD','JPY','EUR'];
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const num=v=>Number(v)||0;
@@ -23,7 +23,7 @@ Page({
  const groups={};selected.forEach(a=>{const key=this.data.filter==='类型'?a.type:a.account;groups[key]=(groups[key]||0)+value(a)});
  this.setData({cashBalance:fmt(cash),utilization:utilization.toFixed(2)+'%',utilizationWidth:utilization.toFixed(1),usdCny:usdRate>0?usdRate.toFixed(4):'--',dailyProfit:daily===null?'--':(daily>0?'+':'')+fmt(daily),dailyRate:dailyPct===null?'--':(dailyPct>0?'+':'')+dailyPct.toFixed(2)+'%',dailyTrend:daily===null?'flat':daily>0?'up':daily<0?'down':'flat',accountGroups,dailyNote:daily===null?'缺少昨日快照，暂不能计算今日收益':'今日收益按昨日快照和今日净存入估算',assets,accounts:db.accounts,accountFilters:['全部'].concat(db.accounts),assetCount:db.assets.length,snapshotCount:db.snapshots.length,total:fmt(total),viewTotal:this.data.hidden?'••••••':fmt(total),yearProfit:profit===null?'未设置':(profit>0?'+':'')+fmt(profit),yearTrend:profit===null?'flat':profit>0?'up':profit<0?'down':'flat',yearRate:profit===null?'--':num(baseline.amount)>0?(profit/num(baseline.amount)*100).toFixed(2)+'%':'--',viewYear:this.data.hidden?'••••':profit===null?'未设置':fmt(profit),groups:Object.keys(groups).map(name=>({name,amount:fmt(groups[name]),percent:total>0?(groups[name]/total*100).toFixed(1):'0.0'})).sort((a,b)=>parseFloat(b.percent)-parseFloat(a.percent)),snapshots:db.snapshots.slice().reverse().map(s=>({...s,display:fmt(s.amount)})),rates:Object.keys(db.rates).map(currency=>({currency,rate:db.rates[currency]})),baselineText:baseline?fmt(baseline.amount):'未设置',yearFlows:fmt(flows),dividendTotal:fmt(db.transactions.filter(t=>t.type==='现金分红'&&t.date.startsWith(year+'-')).reduce((n,t)=>n+num(t.amount)*(t.currency==='CNY'?1:num(db.rates[t.currency])),0)),unpricedCount:selected.filter(a=>a.currency!=='CNY'&&!(num(db.rates[a.currency])>0)).length,flowList:(db.flows||[]).slice().reverse().slice(0,30).map(f=>({...f,display:fmt(f.amount)})),txList:db.transactions.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.createdAt||'').localeCompare(String(a.createdAt||''))).filter(t=>(this.data.txTypeFilter==='全部'||t.type===this.data.txTypeFilter)&&(!this.data.txSearch||((t.assetName||'')+' '+(t.note||'')+' '+(t.type||'')).toLowerCase().includes(this.data.txSearch.toLowerCase()))).slice(0,this.data.txShown).map(t=>({...t,amountText:fmt(t.amount),label:(db.assets.find(a=>a.id===t.assetId)||{}).name||t.assetName||'已移除资产'}))});
  },
- isHolding(a){return ['A股','港股','美股','ETF','实物黄金','积存金','黄金ETF','加密货币'].includes(a.type)},
+ isHolding(a){return ['A股','港股','美股','ETF','场外基金','实物黄金','积存金','黄金ETF','加密货币'].includes(a.type)},
  toggleAccount(e){const key=e.currentTarget.dataset.account;this.data.accountExpanded[key]=this.data.accountExpanded[key]===false?true:false;this.refresh()},
  switchTab(e){this.setData({tab:e.currentTarget.dataset.tab,formOpen:false})},
  toggleHidden(){this.setData({hidden:!this.data.hidden});this.refresh()},
@@ -60,16 +60,16 @@ Page({
  toggleAutoMarket(e){this.db.autoMarket=!!e.detail.value;this.setData({autoMarket:this.db.autoMarket});this.save();if(this.db.autoMarket)this.refreshMarket()},
  refreshMarket(){
   if(this.data.marketBusy)return;
-  const holdings=this.db.assets.filter(a=>this.isHolding(a)&&(a.code||a.type==='实物黄金')&&['A股','港股','美股','ETF','黄金ETF','加密货币','实物黄金'].includes(a.type)).map(a=>({id:a.id,type:a.type,code:a.code}));
+  const holdings=this.db.assets.filter(a=>this.isHolding(a)&&(a.code||a.type==='实物黄金')&&['A股','港股','美股','ETF','场外基金','黄金ETF','加密货币','实物黄金'].includes(a.type)).map(a=>({id:a.id,type:a.code==='028923'&&a.type==='ETF'?'场外基金':a.type,code:a.code}));
   if(!holdings.length){this.setData({marketStatus:'没有可查询的资产代码；请在资产编辑中填写代码'});return}
   if(!wx.cloud||!wx.cloud.callFunction){this.setData({marketStatus:'当前微信基础库不支持云函数'});return}
   this.setData({marketBusy:true,marketStatus:'正在通过微信云开发查询行情…'});
   wx.cloud.callFunction({name:'quotes',data:{assets:holdings},success:r=>{
    const result=r.result||{};if(!result.ok){this.setData({marketStatus:'云函数未返回有效行情，原价格保持不变'});return}
    let count=0;const quotes=result.quotes||{};const missingAssets=[];
-   for(const asset of this.db.assets){const quote=quotes[asset.id];if(!quote||!(Number(quote.price)>0)){if(['美股','港股'].includes(asset.type)&&asset.code)missingAssets.push(asset.code);continue;}
+   for(const asset of this.db.assets){const quote=quotes[asset.id];if(!quote||!(Number(quote.price)>0)){if(['美股','港股','ETF','场外基金','黄金ETF'].includes(asset.type)&&asset.code)missingAssets.push(asset.code);continue;}
     if(asset.currency!==quote.currency){if(asset.type==='美股'||asset.type==='港股'||asset.type==='实物黄金'||!asset.quoteUpdatedAt){asset.currency=quote.currency}else{continue}}
-    asset.price=Number(quote.price);if(quote.name&&!asset.name)asset.name=quote.name;asset.quoteUpdatedAt=quote.fetchedAt;count++;
+    asset.price=Number(quote.price);if(quote.name&&!asset.name)asset.name=quote.name;asset.quoteUpdatedAt=quote.fetchedAt;if(quote.navDate)asset.navDate=quote.navDate;if(asset.code==='028923'&&asset.type==='ETF')asset.type='场外基金';count++;
    }
    let rateCount=0;if(result.rates){for(const [currency,rate] of Object.entries(result.rates)){if(currency==='CNY')continue;if(Number(rate)>0){this.db.rates[currency]=Number(rate);rateCount++}}}
    if(count||rateCount){this.db.lastMarketUpdate=result.fetchedAt;this.save()}const snapped=this.snapshot(true);
