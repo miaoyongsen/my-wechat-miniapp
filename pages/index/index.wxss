@@ -34,3 +34,24 @@
 .assetRow .assetActions{margin-top:16rpx;padding-top:14rpx;border-color:#f5f6f8;gap:32rpx}
 .tabs{border-top:1rpx solid #edf0f4;box-shadow:none;padding:24rpx 0 40rpx}
 .tabs .active{color:#1c5ed2}.addFab{background:#2668da;box-shadow:0 8rpx 22rpx #2b5fba35}
+
+/* Account-grouped holdings */
+.accountCard{background:#fff;border-radius:24rpx;overflow:hidden;margin-bottom:20rpx;border:1rpx solid #edf0f4}
+.accountHeader{display:flex;align-items:center;justify-content:space-between;padding:30rpx 26rpx;min-height:86rpx}
+.accountIdentity{display:flex;align-items:center;min-width:0;flex:1}
+.accountMarker{width:10rpx;height:65rpx;border-radius:10rpx;margin-right:22rpx;flex-shrink:0}
+.accountTitle{font-size:33rpx;font-weight:750;color:#1b2940}
+.accountCount{font-size:23rpx;color:#9ba6b6;margin-top:8rpx}
+.accountSummary{text-align:right;max-width:55%}
+.accountTotal{font-size:35rpx;font-weight:750;color:#1b2940}
+.accountChevron{font-size:23rpx;color:#8594a7;margin-top:10rpx}
+.accountContents{border-top:1rpx solid #f0f2f6}
+.accountContents .assetRow{border-radius:0;padding:28rpx 26rpx 20rpx}
+.assetLeft{flex:1;min-width:0}
+.accountContents .assetName{font-size:32rpx;font-weight:650}
+.accountContents .assetRight{min-width:200rpx}
+.assetValue{font-size:34rpx;font-weight:750;color:#202e43}
+.assetReturn{font-size:33rpx;font-weight:750;margin-top:10rpx}
+.assetReturn.up{color:#df4250}.assetReturn.down{color:#12976a}.assetReturn.flat{color:#8a97a8}
+.assetCurrency{font-size:21rpx;color:#a0aab8;margin-top:4rpx}
+.accountContents .assetActions{font-size:25rpx}
