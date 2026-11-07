@@ -79,3 +79,14 @@
 .rankName{font-size:27rpx;font-weight:600;color:#34435a}
 .rankAmount{font-size:30rpx;font-weight:750;font-variant-numeric:tabular-nums}
 .rankAmount.up{color:#df414b}.rankAmount.down{color:#15996b}.rankAmount.flat{color:#8793a5}
+
+.dashYear{background:#fff;border:1rpx solid #edf0f4;border-radius:24rpx;padding:28rpx 30rpx;margin-bottom:20rpx}
+.dashYearAmount{font-size:42rpx;font-weight:750;margin-top:14rpx}
+.dashYearAmount.up,.accountGain.up{color:#df414b}.dashYearAmount.down,.accountGain.down{color:#15996b}.dashYearAmount.flat,.accountGain.flat{color:#78869a}
+.dashYearMeta{font-size:22rpx;color:#738198;margin-top:10rpx}
+.accountFinance{display:flex;gap:16rpx;margin-top:18rpx;padding-top:16rpx;border-top:1rpx solid #f0f2f6}
+.accountFinance>view{flex:1;min-width:0;display:flex;flex-direction:column;gap:8rpx}
+.accountFinance>view>text:first-child{font-size:20rpx;color:#929eae}
+.accountFinance>view>text:last-child{font-size:23rpx;font-weight:700;color:#34435a;white-space:nowrap}
+.accountFinance .accountGain.up{color:#df414b}.accountFinance .accountGain.down{color:#15996b}
+.baseAccountInput{width:230rpx;text-align:right;font-size:25rpx;height:66rpx}
