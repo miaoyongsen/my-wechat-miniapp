@@ -90,3 +90,5 @@
 .accountFinance>view>text:last-child{font-size:23rpx;font-weight:700;color:#34435a;white-space:nowrap}
 .accountFinance .accountGain.up{color:#df414b}.accountFinance .accountGain.down{color:#15996b}
 .baseAccountInput{width:230rpx;text-align:right;font-size:25rpx;height:66rpx}
+
+.accountHeader{flex-wrap:wrap}.accountIdentity{flex:1 1 100%}.accountSummary{width:100%;max-width:none;text-align:left;margin-top:14rpx}.accountFinance{width:100%}
