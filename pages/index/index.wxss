@@ -92,3 +92,14 @@
 .baseAccountInput{width:230rpx;text-align:right;font-size:25rpx;height:66rpx}
 
 .accountHeader{flex-wrap:wrap}.accountIdentity{flex:1 1 100%}.accountSummary{width:100%;max-width:none;text-align:left;margin-top:14rpx}.accountFinance{width:100%}
+
+.accountFinance{display:flex;align-items:center;justify-content:space-between;margin-top:12rpx;padding-top:12rpx;border-top:1rpx solid #f0f2f6}
+.accountFinance>text:first-child{font-size:20rpx;color:#929eae}
+.accountFinance>text:last-child{font-size:23rpx;font-weight:700}
+.accountExpandedProfit{display:flex;align-items:flex-end;justify-content:space-between;padding:20rpx 8rpx 24rpx;border-bottom:1rpx solid #eef1f5;margin-bottom:8rpx}
+.accountTotalProfit,.accountTodayProfit{display:flex;flex-direction:column;gap:8rpx}
+.accountTotalProfit>text:first-child{font-size:21rpx;color:#8b97a8}
+.accountTotalProfit>text:last-child{font-size:26rpx;font-weight:700}
+.accountTodayProfit{text-align:right}
+.accountTodayProfit>text:first-child{font-size:23rpx;color:#68778d}
+.accountTodayProfit>text:last-child{font-size:42rpx;font-weight:800;line-height:1.15}
