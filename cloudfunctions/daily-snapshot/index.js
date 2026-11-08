@@ -6,9 +6,9 @@ exports.main=async()=>{const now=new Date(Date.now()+8*3600000),date=now.toISOSt
 try{const doc=(await col.doc(ID).get()).data;if(!doc||!doc.data)return {ok:false,message:'云端尚无资产数据'};
 const data=doc.data;if(!Array.isArray(data.assets)||!Array.isArray(data.snapshots))return {ok:false,message:'云端数据格式错误'};
 const rates=data.rates||{};const missing=data.assets.filter(a=>a.currency&&a.currency!=='CNY'&&!(num(rates[a.currency])>0));if(missing.length)return {ok:false,message:'缺少汇率，快照未写入',currencies:[...new Set(missing.map(a=>a.currency))]};
-const accountAmounts={};for(const a of data.assets){const account=a.account||'未分类账户';accountAmounts[account]=(accountAmounts[account]||0)+(holding(a.type)?num(a.quantity)*num(a.price):num(a.balance))*(a.currency==='CNY'||!a.currency?1:num(rates[a.currency]));}const amount=Object.values(accountAmounts).reduce((s,v)=>s+v,0);
+const accountAmounts={},assetAmounts={};for(const a of data.assets){const v=(holding(a.type)?num(a.quantity)*num(a.price):num(a.balance))*(a.currency==='CNY'||!a.currency?1:num(rates[a.currency]));assetAmounts[a.id]=v;const account=a.account||'未分类账户';accountAmounts[account]=(accountAmounts[account]||0)+v;}const amount=Object.values(accountAmounts).reduce((s,v)=>s+v,0);
 const deletedDates=Array.isArray(data.deletedSnapshotDates)?data.deletedSnapshotDates:[];const deletedIds=Array.isArray(data.deletedSnapshotIds)?data.deletedSnapshotIds:[];if(deletedDates.includes(date)||deletedIds.includes('auto-'+date))return {ok:true,date,skipped:true,message:'该日期快照已被用户删除，自动任务不再重建'};
-const old=data.snapshots.find(s=>s.date===date);const record={id:old?old.id:'auto-'+date,date,amount,accountAmounts};
+const old=data.snapshots.find(s=>s.date===date);const record={id:old?old.id:'auto-'+date,date,amount,accountAmounts,assetAmounts};
 data.snapshots=old?data.snapshots.map(s=>s.date===date?record:s):[...data.snapshots,record];
 const result=await col.where({_id:ID,revision:doc.revision}).update({data:{data,revision:db.command.inc(1),updatedAt:db.serverDate()}});
 return result.stats.updated?{ok:true,date,amount,message:'23:50云端资产快照已保存'}:{ok:false,message:'版本冲突，本次未覆盖，请重试'};
