@@ -103,3 +103,8 @@
 .accountTodayProfit{text-align:right}
 .accountTodayProfit>text:first-child{font-size:23rpx;color:#68778d}
 .accountTodayProfit>text:last-child{font-size:42rpx;font-weight:800;line-height:1.15}
+
+.assetTodayPnl{display:flex;align-items:center;justify-content:flex-end;gap:10rpx;margin-top:5rpx;font-size:21rpx}
+.assetTodayPnl>text:first-child{color:#8b97a8;font-size:19rpx}
+.assetTodayPnl>text:last-child{font-weight:750}
+.assetTodayPnl.up{color:#df414b}.assetTodayPnl.down{color:#15996b}.assetTodayPnl.flat{color:#8b97a8}
